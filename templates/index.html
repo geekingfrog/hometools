@@ -1,27 +1,18 @@
 {# vim: set ft=django-html #}
-<!DOCTYPE hmtl>
-<html lang="en">
-  <head>
-    <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>coucou</title>
-    <link rel="stylesheet" type="text/css" href="static/pico.min.css">
-  </head>
+{% extends "base.html" %}
 
-  <body>
-    <main class="container">
-      <h1>Coucou</h1>
-      <form method="POST" action="/login">
-        <label for="username">
-          Username
-          <input type="text" id="username" name="username" placeholder="username" value="coucou-username">
-        </label>
-        <label for="password">
-          Password
-          <input type="text" id="password" name="password" placeholder="password" value="very password much secure">
-        </label>
-        <button type="submit">Submit</button>
-      </form>
-    </main>
-  </body>
-</html>
+
+{% block content %}
+  <h1>Coucou</h1>
+  <form method="POST" action="/">
+    <label for="username">
+      Username
+      <input type="text" id="username" name="username" placeholder="username" value="coucou-username">
+    </label>
+    <label for="password">
+      Password
+      <input type="text" id="password" name="password" placeholder="password" value="very password much secure">
+    </label>
+    <button type="submit">Submit</button>
+  </form>
+{% endblock content %}

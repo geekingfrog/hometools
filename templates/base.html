@@ -1,0 +1,21 @@
+{# vim: set ft=django-html #}
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{% block title %}tools{% endblock %}</title>
+  <link rel="stylesheet" type="text/css" href="/static/pico.min.css">
+  {% block head %} {% endblock %}
+</head>
+
+<body>
+  <main class="container">
+    {% block content %}
+      <p>placeholder content</p>
+    {% endblock content %}
+  </main>
+</body>
+
+</html>
