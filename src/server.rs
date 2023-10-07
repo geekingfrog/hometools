@@ -2,12 +2,14 @@ use askama::Template;
 use axum::{
     async_trait,
     error_handling::HandleErrorLayer,
-    extract::FromRequestParts,
-    http::{request::Parts, StatusCode},
-    response::{Html, IntoResponse},
+    extract::{FromRequest, FromRequestParts},
+    http::{request::Parts, Request, StatusCode},
+    middleware::Next,
+    response::{Html, IntoResponse, Redirect, Response},
     routing::{self, get, post},
-    BoxError, Form, Router,
+    BoxError, Form, RequestExt, RequestPartsExt, Router,
 };
+use tower::ServiceExt;
 
 use serde::{Deserialize, Serialize};
 use tower::ServiceBuilder;
@@ -50,29 +52,27 @@ where
 
     async fn from_request_parts(parts: &mut Parts, _state: &S) -> Result<Self, Self::Rejection> {
         use axum::RequestPartsExt;
-        tracing::info!("COUCOU extracting here!");
 
         let sess = parts.extract::<Session>().await.expect("got the session");
 
-        tracing::info!("COUCOU got session!");
         let user = sess
             .get("user")
             .unwrap_or(None)
             .ok_or(StatusCode::UNAUTHORIZED)?;
-        tracing::info!("COUCOU got user! {:?}", sess);
 
         Ok(user)
     }
 }
 
-async fn root_post(
-    mut sess: Session,
-    stuff: Option<AuthedUser>,
-    Form(login): Form<LoginForm>,
-) -> axum::response::Response {
-    // tracing::debug!("got stuff from session: {:?}", sess.get_raw("username"));
-    // tracing::debug!("authed user? {:?}", stuff);
-    // sess.insert_raw("username", format!("{}-{}", login.username, login.password));
+async fn root_get(user: Option<AuthedUser>) -> Response {
+    match user {
+        Some(_) => Redirect::to("/tools").into_response(),
+        None => Html(IndexTemplate {}.render().unwrap()).into_response(),
+    }
+}
+
+async fn root_post(sess: Session, Form(login): Form<LoginForm>) -> Response {
+    // TODO check the password!
     sess.insert(
         "user",
         AuthedUser {
@@ -82,6 +82,20 @@ async fn root_post(
     .unwrap();
 
     axum::response::Redirect::to("/").into_response()
+}
+
+async fn auth_middleware<B>(
+    // _state: axum::extract::State<()>,
+    mut request: Request<B>,
+    next: Next<B>,
+) -> Response
+where
+    B: Send + 'static,
+{
+    match request.extract_parts::<AuthedUser>().await {
+        Ok(_) => next.run(request).await,
+        Err(status_code) => (status_code, Html(IndexTemplate {}.render().unwrap())).into_response(),
+    }
 }
 
 impl Server {
@@ -95,26 +109,24 @@ impl Server {
             .layer(SessionManagerLayer::new(session_store));
 
         let app = Router::new()
-            .layer(trace_layer)
-            .route(
-                "/",
-                get(|| async {
-                    let tpl = IndexTemplate {};
-                    Html(tpl.render().unwrap())
-                })
-                .post(root_post),
-            )
-            .route(
+            .route("/", get(root_get).post(root_post))
+            .nest(
                 "/tools",
-                get(|| async { Html(ToolsTemplate {}.render().unwrap()) }),
+                Router::new()
+                    .route(
+                        "/",
+                        get(|| async { Html(ToolsTemplate {}.render().unwrap()) }),
+                    )
+                    .layer(axum::middleware::from_fn(auth_middleware)), // .layer(axum::middleware::from_extractor::<AuthedUser>()),
             )
-            .layer(session_service)
             .fallback(|| async {
                 (
                     StatusCode::NOT_FOUND,
                     Html(NotFoundTemplate {}.render().unwrap()),
                 )
             })
+            .layer(session_service)
+            .layer(trace_layer)
             .nest_service("/static", routing::get_service(ServeDir::new("static")));
 
         Server { router: app }
