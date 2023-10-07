@@ -9,13 +9,12 @@ edition = "2021"
 anyhow = "1.0.75"
 askama = "0.12.1"
 axum = "0.6.20"
-axum-sessions = "0.5.0"
-hex = { version = "0.4.3", features = ["serde"] }
 password-hash = "0.5.0"
 serde = { version = "1.0.188", features = ["derive"] }
 tokio = { version = "1.32.0", features = ["full"] }
 tower = { version = "0.4.13", features = ["tracing"] }
 tower-http = { version = "0.4.4", features = ["fs", "trace"] }
+tower-sessions = "0.2.1"
 tracing = "0.1.37"
 tracing-subscriber = { version = "0.3.17", features = ["env-filter"] }
 
