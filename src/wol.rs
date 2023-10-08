@@ -1,6 +1,3 @@
-use std::io::Write;
-use std::net::{AddrParseError, Ipv4Addr};
-
 use tokio::net::UdpSocket;
 
 #[derive(Debug)]
@@ -42,7 +39,7 @@ pub async fn send_wol(mac: MacAddress) -> anyhow::Result<()> {
     let mut magic_packet = [0xFF; 6 + 6 * 16];
     for i in 0..16 {
         let offset = 6 + i * 6;
-        magic_packet[offset..offset+6].copy_from_slice(&mac.0);
+        magic_packet[offset..offset + 6].copy_from_slice(&mac.0);
         // for (j, b) in mac.0.iter().enumerate() {
         //     magic_packet[6 + i * 6 + j] = *b;
         // }

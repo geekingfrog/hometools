@@ -1,18 +1,21 @@
 use anyhow::Result;
 use pitools::server;
-use std::str::FromStr;
+
+// use password_hash::{rand_core::OsRng, PasswordHasher, SaltString};
+// use scrypt::Scrypt;
 
 #[tokio::main]
 async fn main() -> Result<()> {
     tracing_subscriber::fmt::init();
 
-    // let addr = "0.0.0.0:3000".parse().unwrap();
-    // tracing::info!("Listening on address {:?}", addr);
-    // server::Server::new().run(addr).await?;
+    let addr = "0.0.0.0:3000".parse().unwrap();
+    let server = server::Server::new().await?;
+    server.run(addr).await?;
 
-    let server_mac_str = std::env::var("SERVER_MAC")?;
-    let mac = pitools::wol::MacAddress::from_str(&server_mac_str).unwrap();
-    pitools::wol::send_wol(mac).await?;
+    // let b64_salt = "deadbeefdeadbeef";
+    // let salt = SaltString::from_b64(b64_salt)?;
+    // let hash = Scrypt.hash_password(b"hunter2", &salt)?;
+    // println!("{}", hash);
 
     Ok(())
 }
