@@ -402,6 +402,27 @@ dependencies = [
 ]
 
 [[package]]
+name = "hometools"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "askama",
+ "axum",
+ "hex",
+ "password-hash",
+ "scrypt",
+ "serde",
+ "thiserror",
+ "tokio",
+ "toml",
+ "tower",
+ "tower-http",
+ "tower-sessions",
+ "tracing",
+ "tracing-subscriber",
+]
+
+[[package]]
 name = "http"
 version = "0.2.9"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -737,27 +758,6 @@ name = "pin-utils"
 version = "0.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "8b870d8c151b6f2fb93e84a13146138f05d02ed11c7e7c54f8826aaaf7c9f184"
-
-[[package]]
-name = "pitools"
-version = "0.1.0"
-dependencies = [
- "anyhow",
- "askama",
- "axum",
- "hex",
- "password-hash",
- "scrypt",
- "serde",
- "thiserror",
- "tokio",
- "toml",
- "tower",
- "tower-http",
- "tower-sessions",
- "tracing",
- "tracing-subscriber",
-]
 
 [[package]]
 name = "proc-macro2"

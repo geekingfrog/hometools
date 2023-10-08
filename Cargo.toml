@@ -1,5 +1,5 @@
 [package]
-name = "pitools"
+name = "hometools"
 version = "0.1.0"
 edition = "2021"
 
@@ -23,5 +23,5 @@ tracing = "0.1.37"
 tracing-subscriber = { version = "0.3.17", features = ["env-filter"] }
 
 [[bin]]
-name = "pitools"
-path = "src/bin/pitools.rs"
+name = "hometools"
+path = "src/bin/hometools.rs"
