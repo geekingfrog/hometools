@@ -32,7 +32,9 @@ struct IndexTemplate {
 
 #[derive(Template)]
 #[template(path = "tools.html")]
-struct ToolsTemplate;
+struct ToolsTemplate {
+    notice: Option<String>,
+}
 
 #[derive(Template)]
 #[template(path = "not-found.html")]
@@ -66,8 +68,6 @@ where
         use axum::RequestPartsExt;
 
         let sess = parts.extract::<Session>().await.expect("got the session");
-        // let Extension(state) = parts.extract::<Extension<Arc<ServerState>>>().await.expect("got the state");
-        // let state = parts.extract::<State<Arc<ServerState>>>().await.expect("got the server state");
 
         let user = sess
             .get("user")
@@ -86,6 +86,8 @@ enum AppError {
     Unauthorized,
     #[error("Session problem: {0}")]
     Sess(#[from] SessionError),
+    #[error("Rendering error: {0}")]
+    RenderError(#[from] askama::Error),
 }
 
 type AppResult<T> = Result<T, AppError>;
@@ -116,14 +118,17 @@ impl IntoResponse for AppError {
             )
                 .into_response(),
             AppError::Sess(err) => AppError::ServerError(anyhow::anyhow!(err)).into_response(),
+            AppError::RenderError(err) => {
+                AppError::ServerError(anyhow::anyhow!(err)).into_response()
+            }
         }
     }
 }
 
-async fn root_get(user: Option<AuthedUser>) -> Response {
+async fn root_get(user: Option<AuthedUser>) -> AppResult<Response> {
     match user {
-        Some(_) => Redirect::to("/tools").into_response(),
-        None => Html(IndexTemplate { err: None }.render().unwrap()).into_response(),
+        Some(_) => Ok(Redirect::to("/tools").into_response().into_response()),
+        None => Ok(Html(IndexTemplate { err: None }.render()?).into_response()),
     }
 }
 
@@ -156,17 +161,38 @@ fn auth(state: Arc<ServerState>, login: &LoginForm) -> anyhow::Result<()> {
     Ok(())
 }
 
+async fn tools_get() -> AppResult<Response> {
+    Ok(Html(ToolsTemplate { notice: None }.render()?).into_response())
+}
+
+async fn tools_post(State(state): State<Arc<ServerState>>) -> AppResult<Response> {
+    crate::wol::send_wol(&state.config.server_mac).await?;
+    let now = time::OffsetDateTime::now_utc();
+    let fmt = time::macros::format_description!("[year]-[month]-[day] [hour]:[minute]:[second]");
+    Ok(Html(
+        ToolsTemplate {
+            notice: Some(format!(
+                "Wake on lan packet sent at {}",
+                now.format(fmt).expect("format iso8601 date")
+            )),
+        }
+        .render()?,
+    )
+    .into_response())
+}
+
 async fn auth_middleware<B>(mut request: Request<B>, next: Next<B>) -> Response
 where
     B: Send + 'static,
 {
     match request.extract_parts::<AuthedUser>().await {
-        Ok(_) => next.run(request).await,
-        Err(status_code) => (
-            status_code,
-            Html(IndexTemplate { err: None }.render().unwrap()),
-        )
-            .into_response(),
+        Ok(_) => next.run(request).await.into_response(),
+        Err(status_code) => IndexTemplate {
+            err: Some("Login required".to_string()),
+        }
+        .render()
+        .map(|body| (status_code, Html(body)).into_response())
+        .unwrap_or_else(|err| AppError::RenderError(err).into_response()),
     }
 }
 
@@ -193,19 +219,17 @@ impl Server {
             .nest(
                 "/tools",
                 Router::new()
-                    .route(
-                        "/",
-                        get(|| async { Html(ToolsTemplate {}.render().unwrap()) }),
-                    )
-                    .layer(axum::middleware::from_fn(
-                        // Arc::clone(&state),
-                        auth_middleware,
-                    )), // .layer(axum::middleware::from_extractor::<AuthedUser>()),
+                    .route("/", get(tools_get).post(tools_post))
+                    .layer(axum::middleware::from_fn(auth_middleware)),
             )
             .fallback(|| async {
                 (
                     StatusCode::NOT_FOUND,
-                    Html(NotFoundTemplate {}.render().unwrap()),
+                    Html(
+                        NotFoundTemplate {}
+                            .render()
+                            .expect("render not found template"),
+                    ),
                 )
             })
             .layer(session_service)

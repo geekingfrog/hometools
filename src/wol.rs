@@ -1,3 +1,5 @@
+use std::net::Ipv4Addr;
+
 use tokio::net::UdpSocket;
 
 #[derive(Debug)]
@@ -33,21 +35,17 @@ impl std::str::FromStr for MacAddress {
     }
 }
 
-pub async fn send_wol(mac: MacAddress) -> anyhow::Result<()> {
+pub async fn send_wol(mac: &MacAddress) -> anyhow::Result<()> {
     let sock = UdpSocket::bind("0.0.0.0:0").await?;
     sock.set_broadcast(true)?;
     let mut magic_packet = [0xFF; 6 + 6 * 16];
     for i in 0..16 {
         let offset = 6 + i * 6;
         magic_packet[offset..offset + 6].copy_from_slice(&mac.0);
-        // for (j, b) in mac.0.iter().enumerate() {
-        //     magic_packet[6 + i * 6 + j] = *b;
-        // }
     }
 
-    println!("{:?}", magic_packet);
-    // sock.connect((Ipv4Addr::BROADCAST, 7)).await?;
-    // sock.send(&magic_packet).await?;
+    sock.connect((Ipv4Addr::BROADCAST, 7)).await?;
+    sock.send(&magic_packet).await?;
 
     Ok(())
 }

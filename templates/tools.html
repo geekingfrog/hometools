@@ -3,4 +3,12 @@
 
 {% block content %}
   <h1>Tools here !</h1>
+  {% match notice %}
+    {% when Some with (notice) %}
+    <p>{{ notice }}</p>
+    {% when None%}
+  {% endmatch %}
+  <form method="POST" action="/tools">
+    <button type="submit">Wake up Ganymede</button>
+  </form>
 {% endblock content %}

@@ -1,5 +1,5 @@
 use anyhow::{anyhow, Context};
-use password_hash::{PasswordHashString, SaltString};
+use password_hash::PasswordHashString;
 use std::{collections::HashMap, str::FromStr};
 
 use crate::wol::MacAddress;
@@ -8,8 +8,6 @@ use toml;
 #[derive(Debug)]
 pub(crate) struct Config {
     pub(crate) server_mac: MacAddress,
-    /// for simplicity, only get a unique salt for every user (likely only one ever)
-    pub(crate) salt: SaltString,
     pub(crate) users: HashMap<String, PasswordHashString>,
 }
 
@@ -22,7 +20,6 @@ struct UserAuth {
 #[derive(serde::Deserialize)]
 struct TomlConfig {
     server_mac: String,
-    salt: String,
     users: Vec<UserAuth>,
 }
 
@@ -42,11 +39,6 @@ pub(crate) async fn read_config() -> anyhow::Result<Config> {
             phc.map(|phc| (auth.username, phc))
         })
         .collect::<password_hash::errors::Result<HashMap<_, _>>>()?;
-    let salt = SaltString::from_b64(&toml_config.salt)?;
 
-    Ok(Config {
-        server_mac,
-        users,
-        salt,
-    })
+    Ok(Config { server_mac, users })
 }
